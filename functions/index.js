@@ -8,6 +8,11 @@ const functions = require('firebase-functions');
 //  response.send("Hello from Firebase!");
 // });
 
+// npm i -g firebase-tools
+// firebase login
+// start > firebase serve --only functions
+// curl -H 'Content-Type:application/json' -d '{"cname": "general"}' http://local
+
 const admin = require('firebase-admin');
 const serviceAccount = require('./service/serviceAccountKey.json');
 admin.initializeApp({
@@ -33,6 +38,7 @@ const checkUser = (req, res, next) => {
     req.user = anonymousUser;
     if (req.query.auth_token !== undefined) {
         let idToken = req.query.auth_token;
+        console.log(`idToken >> ${idToken}`);
         admin.auth().verifyIdToken(idToken).then(decodedIdToken => {
             let authUser = {
                 id: decodedIdToken.user_id,
@@ -52,8 +58,10 @@ const checkUser = (req, res, next) => {
 app.use(checkUser);
 
 function createChannel(cname){
-    let channelsRef = admin.database().ref('channels');
+    let channelsRef = admin.database().ref(`channels/${cname}`);
     console.log(`channelsRef ? >> ${channelsRef}`);
+    //let childRef = channelsRef.child(cname);
+    //console.log(`childRef ? >> ${childRef}`);
     let date1 = new Date();
     let date2 = new Date();
     date2.setSeconds(date2.getSeconds() + 1);
@@ -80,7 +88,8 @@ function createChannel(cname){
         }
     }`;
     console.log(defaultData);
-    channelsRef.child(cname).update(JSON.parse(defaultData))
+    channelsRef.push();
+    channelsRef.set(JSON.parse(defaultData))
                             .then(function() {
                                 console.log({'result': 'success'});
                             })
@@ -91,8 +100,8 @@ function createChannel(cname){
 }
 
 app.post('/channels', (req, res) => {
-    console.log(`cname >> ${req.body.cname}`);
     let cname = req.body.cname;
+    console.log(`cname >> ${cname}`);
     createChannel(cname);
     res.header('Content-Type', 'application/json; charset=utf-8');
     res.status(201).json({result: 'ok'});
